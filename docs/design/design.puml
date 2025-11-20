@@ -1,2 +1,190 @@
 @startuml
+skinparam classAttributeIconSize 0
+hide empty members
+
+' -----------------------------
+' MAIN ENTRYPOINT
+' -----------------------------
+
+class Main {
+    + main(args: String[]): void
+}
+
+Main --> AppController
+
+' -----------------------------
+' PRESENTATION LAYER
+' -----------------------------
+
+package "Presentation" {
+    class AppController {
+        - workoutService: WorkoutService
+        - sessionService: SessionService
+        - statsService: StatsService
+        - view: ConsoleView
+        + run(): void
+    }
+
+    class ConsoleView {
+        + showMenu(): void
+        + displayWorkouts(list: List<Workout>): void
+    }
+}
+
+Main --> ConsoleView
+AppController --> ConsoleView : uses
+
+' -----------------------------
+' SERVICE LAYER
+' -----------------------------
+
+package "Services" {
+    class WorkoutService {
+        - repo: WorkoutRepository
+        - factory: GeneratorFactory
+        + createCustomWorkout(): WorkoutBuilder
+        + saveWorkout(workout: Workout): void
+        + generateWorkout(user: User): Workout
+    }
+
+    class SessionService {
+        - sessionRepo: SessionRepository
+        + startSession(workout: Workout): WorkoutSession
+        + finishSession(session: WorkoutSession): void
+    }
+
+    class StatsService {
+        - sessionRepo: SessionRepository
+        + getWeeklyWorkoutCount(user: User): int
+    }
+
+    class GeneratorFactory {
+        + getGenerator(goal: GoalType): PlanGenerator
+    }
+}
+
+AppController --> WorkoutService
+AppController --> SessionService
+AppController --> StatsService
+
+WorkoutService --> GeneratorFactory
+
+' -----------------------------
+' REPOSITORIES (PERSISTENCE)
+' -----------------------------
+
+package "Persistence" {
+    interface WorkoutRepository {
+        + save(workout: Workout): void
+        + findByUser(user: User): List<Workout>
+    }
+
+    interface SessionRepository {
+        + save(session: WorkoutSession): void
+        + findByUser(user: User): List<WorkoutSession>
+    }
+
+    class InMemoryWorkoutRepository implements WorkoutRepository
+    class InMemorySessionRepository implements SessionRepository
+}
+
+WorkoutService --> WorkoutRepository
+SessionService --> SessionRepository
+StatsService --> SessionRepository
+
+WorkoutRepository <|.. InMemoryWorkoutRepository
+SessionRepository <|.. InMemorySessionRepository
+
+Main --> InMemoryWorkoutRepository
+Main --> InMemorySessionRepository
+
+' -----------------------------
+' STRATEGY LAYER (GENERATION)
+' -----------------------------
+
+package "Generation (Strategy)" {
+    interface PlanGenerator {
+        + generate(user: User): Workout
+    }
+
+    class StrengthPlanGenerator implements PlanGenerator
+    class EndurancePlanGenerator implements PlanGenerator
+    class HypertrophyPlanGenerator implements PlanGenerator
+}
+
+GeneratorFactory --> PlanGenerator
+PlanGenerator <|.. StrengthPlanGenerator
+PlanGenerator <|.. EndurancePlanGenerator
+PlanGenerator <|.. HypertrophyPlanGenerator
+
+' -----------------------------
+' DOMAIN LAYER
+' -----------------------------
+
+package "Domain" {
+
+    class User {
+        - id: String
+        - name: String
+        - goal: GoalType
+        + getGoal(): GoalType
+        + setGoal(goal: GoalType): void
+    }
+
+    enum GoalType {
+        STRENGTH
+        HYPERTROPHY
+        ENDURANCE
+        FAT_LOSS
+    }
+
+    class Exercise {
+        - name: String
+        - muscleGroup: String
+        - difficulty: int
+    }
+
+    class WorkoutExercise {
+        - exercise: Exercise
+        - sets: int
+        - reps: int
+        - restSeconds: int
+    }
+
+    class Workout {
+        - id: String
+        - name: String
+        - items: List<WorkoutExercise>
+        + addItem(item: WorkoutExercise): void
+    }
+
+    class WorkoutSession {
+        - workout: Workout
+        - date: Date
+        - entries: List<SessionEntry>
+    }
+
+    class SessionEntry {
+        - workoutExercise: WorkoutExercise
+        - actualReps: int
+        - actualWeight: double
+    }
+
+    class WorkoutBuilder {
+        - name: String
+        - items: List<WorkoutExercise>
+        + setName(name: String): WorkoutBuilder
+        + addExercise(ex: Exercise, sets: int, reps: int, rest: int): WorkoutBuilder
+        + build(): Workout
+    }
+}
+
+WorkoutExercise -->Exercise
+Workout --> WorkoutExercise
+WorkoutSession --> Workout
+WorkoutSession -->  SessionEntry
+SessionEntry --> WorkoutExercise
+
+WorkoutService --> WorkoutBuilder : uses builder
+
 @enduml
