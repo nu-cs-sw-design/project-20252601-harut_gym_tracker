@@ -32,7 +32,7 @@ package "Presentation" {
 }
 
 Main --> ConsoleView
-AppController --> ConsoleView : uses
+AppController --> ConsoleView
 
 ' -----------------------------
 ' SERVICE LAYER
@@ -70,10 +70,10 @@ AppController --> StatsService
 WorkoutService --> GeneratorFactory
 
 ' -----------------------------
-' REPOSITORIES (PERSISTENCE)
+' REPOSITORIES (Data Source)
 ' -----------------------------
 
-package "Persistence" {
+package "Data Source" {
     interface WorkoutRepository {
         + save(workout: Workout): void
         + findByUser(user: User): List<Workout>
@@ -185,6 +185,6 @@ WorkoutSession --> Workout
 WorkoutSession -->  SessionEntry
 SessionEntry --> WorkoutExercise
 
-WorkoutService --> WorkoutBuilder : uses builder
+WorkoutService --> WorkoutBuilder
 
 @enduml
